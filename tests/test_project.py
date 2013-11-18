@@ -11,7 +11,8 @@ if os.path.isdir(DIR):
 
 import unittest
 import trytond.tests.test_tryton
-from trytond.tests.test_tryton import test_view, test_depends
+from trytond.transaction import Transaction
+from trytond.tests.test_tryton import test_view, test_depends, DB_NAME, USER, POOL, CONTEXT
 
 
 class ProjectTestCase(unittest.TestCase):
@@ -33,6 +34,51 @@ class ProjectTestCase(unittest.TestCase):
         Test depends.
         '''
         test_depends()
+
+    def test0010active(self):
+        '''
+        Test Active Field changes
+        '''
+        with Transaction().start(DB_NAME, USER, context=CONTEXT):
+            Work = POOL.get('timesheet.work')
+            ProjectWork = POOL.get('project.work')
+            Company = POOL.get('company.company')
+            Currency = POOL.get('currency.currency')
+            Party = POOL.get('party.party')
+
+            currency, = Currency.create([{
+                'name': 'US Dollar',
+                'code': 'USD',
+                'symbol': '$',
+            }])
+            company_party, = Party.create([{
+                'name': 'Openlabs',
+            }])
+            company, = Company.create([{
+                'party': company_party.id,
+                'currency': currency.id,
+            }])
+
+            work1, = Work.create([{
+                'name': 'Test Project1',
+                'company': company.id,
+            }])
+            work2, = Work.create([{
+                'name': 'Test Project2',
+                'company': company.id,
+            }])
+            work3, = Work.create([{
+                'name': 'Test Project3',
+                'company': company.id,
+            }])
+            self.assertEqual(Work.search([], count=True), 3)
+
+            work1.active = False
+            work1.save()
+            self.assertEqual(Work.search([], count=True), 2)
+
+
+
 
 
 def suite():
